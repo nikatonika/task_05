@@ -1,0 +1,45 @@
+---
+- name: Deploy Application
+  hosts: localhost
+  become: yes
+  vars:
+    project_dir: /home/your_user/your_project
+    container_name: python-py
+
+  tasks:
+    - name: Ensure project directory exists
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Copy project files to the server
+      synchronize:
+        src: ../
+        dest: "{{ project_dir }}"
+        archive: yes
+        delete: yes
+
+    - name: Build Docker image
+      docker_image:
+        path: "{{ project_dir }}"
+        name: "{{ container_name }}"
+        tag: latest
+        state: present
+
+    - name: Stop and remove existing container if exists
+      docker_container:
+        name: "{{ container_name }}"
+        state: absent
+
+    - name: Run Docker container
+      docker_container:
+        name: "{{ container_name }}"
+        image: python:3.9
+        state: started
+        restart_policy: always
+        ports:
+          - "5000:5000"
+
